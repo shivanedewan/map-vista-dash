@@ -52,6 +52,17 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				dashboard: {
+					bg: 'hsl(var(--dashboard-bg))',
+					sidebar: 'hsl(var(--dashboard-sidebar))',
+					header: 'hsl(var(--dashboard-header))'
+				},
+				data: {
+					blue: 'hsl(var(--data-blue))',
+					green: 'hsl(var(--data-green))',
+					orange: 'hsl(var(--data-orange))',
+					purple: 'hsl(var(--data-purple))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
