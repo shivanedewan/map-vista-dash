@@ -1,113 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Database, TrendingUp, Globe } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
-import { DataTable } from "@/components/DataTable";
+import { FilterableDataTable } from "@/components/FilterableDataTable";
 import { MapVisualization } from "@/components/MapVisualization";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import dashboardHero from "@/assets/dashboard-hero.jpg";
 
 interface IndexData {
-  id: string;
-  name: string;
-  docCount: number;
-  size: string;
-  hasGeoData: boolean;
-  lastUpdated: string;
-  category: string;
+  uuid: string;
+  index: string;
+  'docs.count': string;
+  'store.size': string;
+  health: string;
+  status: string;
 }
-
-// Sample data for different indexes (same as in DataTable component)
-const sampleData: Record<string, any[]> = {
-  "user-locations": [
-    {
-      id: "user_001",
-      userId: "USR001",
-      name: "John Doe",
-      latitude: 40.7128,
-      longitude: -74.0060,
-      city: "New York",
-      country: "USA",
-      lastSeen: "2024-01-20T10:30:00Z",
-      status: "active"
-    },
-    {
-      id: "user_002", 
-      userId: "USR002",
-      name: "Jane Smith",
-      latitude: 51.5074,
-      longitude: -0.1278,
-      city: "London",
-      country: "UK",
-      lastSeen: "2024-01-20T09:15:00Z",
-      status: "active"
-    },
-    {
-      id: "user_003",
-      userId: "USR003", 
-      name: "Carlos Rodriguez",
-      latitude: 48.8566,
-      longitude: 2.3522,
-      city: "Paris",
-      country: "France",
-      lastSeen: "2024-01-19T18:45:00Z",
-      status: "offline"
-    }
-  ],
-  "delivery-tracking": [
-    {
-      id: "del_001",
-      trackingId: "TRK12345",
-      latitude: 37.7749,
-      longitude: -122.4194,
-      address: "123 Market St, San Francisco, CA",
-      status: "in_transit",
-      estimatedDelivery: "2024-01-21T14:00:00Z",
-      packageType: "Electronics"
-    },
-    {
-      id: "del_002",
-      trackingId: "TRK12346", 
-      latitude: 34.0522,
-      longitude: -118.2437,
-      address: "456 Sunset Blvd, Los Angeles, CA",
-      status: "delivered",
-      estimatedDelivery: "2024-01-20T16:30:00Z",
-      packageType: "Clothing"
-    }
-  ],
-  "store-analytics": [
-    {
-      id: "store_001",
-      storeId: "ST001",
-      storeName: "Downtown Electronics",
-      latitude: 40.7589,
-      longitude: -73.9851,
-      revenue: 15420.50,
-      customers: 89,
-      date: "2024-01-20",
-      category: "Electronics"
-    },
-    {
-      id: "store_002",
-      storeId: "ST002", 
-      storeName: "Fashion Central",
-      latitude: 40.7505,
-      longitude: -73.9934,
-      revenue: 23180.75,
-      customers: 156,
-      date: "2024-01-20",
-      category: "Fashion"
-    }
-  ]
-};
 
 const Index = () => {
   const [selectedIndex, setSelectedIndex] = useState<IndexData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [data, setData] = useState<any[]>([]);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
 
-  const currentData = selectedIndex ? sampleData[selectedIndex.id] || [] : [];
+  useEffect(() => {
+    if (!selectedIndex) return;
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`/api/${selectedIndex.index}/_search`);
+        const result = await response.json();
+        setData(result.hits.hits.map((hit: any) => ({ id: hit._id, ...hit._source })));
+      } catch (error) {
+        console.error(`Error fetching data for index ${selectedIndex.index}:`, error);
+      }
+    };
+
+    fetchData();
+  }, [selectedIndex]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,14 +88,14 @@ const Index = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-foreground bg-gradient-to-r from-primary to-data-purple bg-clip-text text-transparent">
-                      {selectedIndex.name}
+                      {selectedIndex.index}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {selectedIndex.docCount.toLocaleString()} documents • {selectedIndex.size} • Last updated {selectedIndex.lastUpdated}
+                      {parseInt(selectedIndex["docs.count"]).toLocaleString()} documents • {selectedIndex["store.size"]} • {selectedIndex.health}
                     </p>
                   </div>
                   <Badge variant="secondary" className="glass-card hover-3d">
-                    {selectedIndex.category}
+                    {selectedIndex.status}
                   </Badge>
                 </div>
               </div>
@@ -176,10 +106,12 @@ const Index = () => {
                   {/* Data Table */}
                   <Card className="glass-card hover-3d overflow-hidden">
                     <div className="p-6 h-full overflow-y-auto">
-                      <DataTable 
-                        indexName={selectedIndex.id}
+                      <FilterableDataTable 
+                        indexName={selectedIndex.index}
                         onRowSelect={setSelectedRecord}
                         selectedRow={selectedRecord?.id}
+                        data={data}
+                        onFilteredDataChange={setFilteredData}
                       />
                     </div>
                   </Card>
@@ -188,8 +120,7 @@ const Index = () => {
                   <Card className="glass-card hover-3d overflow-hidden">
                     <div className="p-6 h-full overflow-y-auto">
                       <MapVisualization 
-                        indexName={selectedIndex.id}
-                        data={currentData}
+                        data={filteredData}
                         selectedRecord={selectedRecord}
                       />
                     </div>

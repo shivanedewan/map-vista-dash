@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, Database, MapPin, Calendar, Users, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Database, MapPin, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,53 +7,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface IndexData {
-  id: string;
-  name: string;
-  docCount: number;
-  size: string;
-  hasGeoData: boolean;
-  lastUpdated: string;
-  category: string;
+  uuid: string;
+  index: string;
+  'docs.count': string;
+  'store.size': string;
+  health: string;
+  status: string;
 }
-
-const sampleIndexes: IndexData[] = [
-  {
-    id: "user-locations",
-    name: "user-locations-2024",
-    docCount: 15420,
-    size: "2.1 GB",
-    hasGeoData: true,
-    lastUpdated: "2024-01-20",
-    category: "Users"
-  },
-  {
-    id: "delivery-tracking",
-    name: "delivery-tracking",
-    docCount: 8930,
-    size: "1.5 GB",
-    hasGeoData: true,
-    lastUpdated: "2024-01-19",
-    category: "Logistics"
-  },
-  {
-    id: "store-analytics",
-    name: "store-analytics",
-    docCount: 25680,
-    size: "3.8 GB",
-    hasGeoData: true,
-    lastUpdated: "2024-01-18",
-    category: "Retail"
-  },
-  {
-    id: "weather-data",
-    name: "weather-stations",
-    docCount: 5240,
-    size: "850 MB",
-    hasGeoData: true,
-    lastUpdated: "2024-01-17",
-    category: "Environmental"
-  }
-];
 
 interface AppSidebarProps {
   onIndexSelect: (index: IndexData) => void;
@@ -64,21 +24,25 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onIndexSelect, selectedIndex, isCollapsed, onToggle }: AppSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [indexes, setIndexes] = useState<IndexData[]>([]);
 
-  const filteredIndexes = sampleIndexes.filter(index =>
-    index.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    index.category.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const fetchIndexes = async () => {
+      try {
+        const response = await fetch("/api/_cat/indices?format=json");
+        const data = await response.json();
+        setIndexes(data);
+      } catch (error) {
+        console.error("Error fetching indexes:", error);
+      }
+    };
+
+    fetchIndexes();
+  }, []);
+
+  const filteredIndexes = indexes.filter(index =>
+    index.index.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Users": return Users;
-      case "Logistics": return MapPin;
-      case "Retail": return Database;
-      case "Environmental": return Calendar;
-      default: return Database;
-    }
-  };
 
   return (
     <div className={cn(
@@ -117,13 +81,13 @@ export function AppSidebar({ onIndexSelect, selectedIndex, isCollapsed, onToggle
       {/* Index List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {filteredIndexes.map((index) => {
-          const Icon = getCategoryIcon(index.category);
+          const Icon = Database;
           return (
             <Card
-              key={index.id}
+              key={index.uuid}
               className={cn(
                 "p-3 cursor-pointer hover-3d transition-smooth glass-card",
-                selectedIndex?.id === index.id 
+                selectedIndex?.uuid === index.uuid
                   ? "border-primary glow" 
                   : "hover:border-primary/50",
                 isCollapsed && "p-2 aspect-square flex items-center justify-center"
@@ -133,9 +97,6 @@ export function AppSidebar({ onIndexSelect, selectedIndex, isCollapsed, onToggle
               {isCollapsed ? (
                 <div className="flex flex-col items-center space-y-1">
                   <Icon className="h-5 w-5 text-primary animate-float" />
-                  {index.hasGeoData && (
-                    <MapPin className="h-2 w-2 text-data-green" />
-                  )}
                 </div>
               ) : (
                 <>
@@ -143,26 +104,24 @@ export function AppSidebar({ onIndexSelect, selectedIndex, isCollapsed, onToggle
                     <div className="flex items-center space-x-2">
                       <Icon className="h-4 w-4 text-primary animate-float" />
                       <h3 className="font-medium text-sm text-foreground truncate">
-                        {index.name}
+                        {index.index}
                       </h3>
                     </div>
-                    {index.hasGeoData && (
-                      <MapPin className="h-3 w-3 text-data-green animate-glow" />
-                    )}
+                    <MapPin className="h-3 w-3 text-data-green animate-glow" />
                   </div>
                   
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{index.docCount.toLocaleString()} docs</span>
-                      <span>{index.size}</span>
+                      <span>{parseInt(index['docs.count']).toLocaleString()} docs</span>
+                      <span>{index['store.size']}</span>
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <Badge variant="secondary" className="text-xs glass-card">
-                        {index.category}
+                        {index.health}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {index.lastUpdated}
+                        {index.status}
                       </span>
                     </div>
                   </div>
